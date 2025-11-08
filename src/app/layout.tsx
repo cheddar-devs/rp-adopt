@@ -6,6 +6,9 @@ import NavBar from "@/components/NavBar";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <header>
+        <title>Animal Ark</title>
+      </header>
       <body className="site">
         <Providers>
           <NavBar />
