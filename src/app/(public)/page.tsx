@@ -165,7 +165,7 @@ export default async function Home() {
         ) : (
           <ul className="grid">
             {reserved.map((p) => (
-              <PetCard key={p._id} pet={p} canSchedule={canSchedule} canDelete={canDelete} />
+              <PetCard key={p._id} pet={p} canSchedule={false} canDelete={canDelete} />
             ))}
           </ul>
         )}
