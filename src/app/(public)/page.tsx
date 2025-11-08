@@ -107,7 +107,7 @@ function PetCard({
         </div>
 
         {pet.notes && (
-          <div className="clamp1" title={pet.notes}>
+          <div className="" title={pet.notes}>
             {pet.notes}
           </div>
         )}
