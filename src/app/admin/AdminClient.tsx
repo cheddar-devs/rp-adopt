@@ -3,6 +3,20 @@
 import GuardClient from "@/components/GuardClient";
 import { useState } from "react";
 
+const BREEDS = [
+  "Cat-Shaped",
+  "Husky",
+  "Poodle",
+  "Pug",
+  "Golden Retriever",
+  "Rottweiler",
+  "Australian Shepherd",
+  "Westy",
+] as const;
+
+type SpeciesChoice = "Cat" | "Dog" | "Custom";
+type BreedChoice = typeof BREEDS[number] | "Custom" | "";
+
 export default function AdminClient() {
   // Employees form state
   const [discordId, setDiscordId] = useState("");
@@ -11,12 +25,19 @@ export default function AdminClient() {
   // Pets form state
   const [pet, setPet] = useState({
     name: "",
-    species: "",
-    breed: "",
+    species: "",   // actual value sent (from dropdown OR custom)
+    breed: "",     // actual value sent (from dropdown OR custom)
     age: "",
     notes: "",
     photoUrl: "",
   });
+
+  // Dropdown state
+  const [speciesChoice, setSpeciesChoice] = useState<SpeciesChoice>("Cat");
+  const [speciesCustom, setSpeciesCustom] = useState<string>("");
+
+  const [breedChoice, setBreedChoice] = useState<BreedChoice>("");
+  const [breedCustom, setBreedCustom] = useState<string>("");
 
   // UI state
   const [msg, setMsg] = useState<string | null>(null);
@@ -68,7 +89,14 @@ export default function AdminClient() {
   async function addPet(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!pet.name.trim() || !pet.species.trim()) {
+    // Resolve what we’ll send based on dropdown vs custom states
+    const resolvedSpecies =
+      speciesChoice === "Custom" ? speciesCustom.trim() : speciesChoice;
+
+    const resolvedBreed =
+      breedChoice === "Custom" ? breedCustom.trim() : (breedChoice || "").trim();
+
+    if (!pet.name.trim() || !resolvedSpecies) {
       toast("Pet name and species are required.");
       return;
     }
@@ -80,8 +108,8 @@ export default function AdminClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: pet.name.trim(),
-          species: pet.species.trim(),
-          breed: pet.breed?.trim() || undefined,
+          species: resolvedSpecies,
+          breed: resolvedBreed || undefined,
           age: pet.age?.trim() || undefined,
           notes: pet.notes?.trim() || undefined,
           photoUrl: pet.photoUrl?.trim() || undefined,
@@ -93,7 +121,13 @@ export default function AdminClient() {
         return;
       }
       toast("Pet added");
+
+      // Reset everything to sensible defaults
       setPet({ name: "", species: "", breed: "", age: "", notes: "", photoUrl: "" });
+      setSpeciesChoice("Cat");
+      setSpeciesCustom("");
+      setBreedChoice("");
+      setBreedCustom("");
     } finally {
       setSavingPet(false);
     }
@@ -118,7 +152,9 @@ export default function AdminClient() {
               <span className="title">Employees</span>
               <span className="badge">Add / Update</span>
             </div>
-            <p className="muted">Grant employee access by Discord ID and store their character name.</p>
+            <p className="muted">
+              Grant employee access by Discord ID and store their character name.
+            </p>
 
             <form onSubmit={addEmployee} className="formGrid">
               <label className="field">
@@ -171,24 +207,86 @@ export default function AdminClient() {
                 />
               </label>
 
+              {/* Species */}
               <label className="field">
                 <span className="muted">Species</span>
-                <input
+                <select
                   className="input"
-                  placeholder="Cat / Dog / …"
-                  value={pet.species}
-                  onChange={(e) => setPet((p) => ({ ...p, species: e.target.value }))}
-                />
+                  value={speciesChoice}
+                  onChange={(e) => {
+                    const choice = e.target.value as SpeciesChoice;
+                    setSpeciesChoice(choice);
+                    if (choice === "Custom") {
+                      // Switch to custom entry mode
+                      setSpeciesCustom("");
+                      setPet((p) => ({ ...p, species: "" }));
+                    } else {
+                      // Chose Cat/Dog from dropdown
+                      setSpeciesCustom("");
+                      setPet((p) => ({ ...p, species: choice }));
+                    }
+                  }}
+                >
+                  <option value="Cat">Cat</option>
+                  <option value="Dog">Dog</option>
+                  <option value="Custom">Custom…</option>
+                </select>
+                {speciesChoice === "Custom" && (
+                  <input
+                    className="input"
+                    placeholder="Enter species"
+                    value={speciesCustom}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSpeciesCustom(val);
+                      setPet((p) => ({ ...p, species: val }));
+                    }}
+                    style={{ marginTop: 8 }}
+                  />
+                )}
               </label>
 
+              {/* Breed */}
               <label className="field">
                 <span className="muted">Breed</span>
-                <input
+                <select
                   className="input"
-                  placeholder="Shorthair"
-                  value={pet.breed}
-                  onChange={(e) => setPet((p) => ({ ...p, breed: e.target.value }))}
-                />
+                  value={breedChoice}
+                  onChange={(e) => {
+                    const choice = e.target.value as BreedChoice;
+                    setBreedChoice(choice);
+                    if (choice === "Custom") {
+                      // Switch to custom entry mode
+                      setBreedCustom("");
+                      setPet((p) => ({ ...p, breed: "" }));
+                    } else {
+                      // Predefined or blank
+                      setBreedCustom("");
+                      setPet((p) => ({ ...p, breed: choice || "" }));
+                    }
+                  }}
+                >
+                  <option value="">— Select —</option>
+                  {BREEDS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                  <option value="Custom">Custom…</option>
+                </select>
+                {breedChoice === "Custom" && (
+                  <input
+                    className="input"
+                    placeholder="Enter breed"
+                    value={breedCustom}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setBreedCustom(val);
+                      setPet((p) => ({ ...p, breed: val }));
+                    }}
+                    style={{ marginTop: 8 }}
+                  />
+                )}
               </label>
 
               <label className="field">
@@ -246,23 +344,86 @@ export default function AdminClient() {
             gap: 8px;
             margin-top: 4px;
           }
-          .input {
+
+          /* Unified dark theme */
+          .input,
+          select.input,
+          textarea.input {
             padding: 10px 12px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
             color: var(--text);
             outline: none;
             transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
           }
-          .input:hover { border-color: rgba(255, 255, 255, 0.18); }
-          .input:focus {
-            border-color: rgba(124, 156, 255, 0.55);
-            box-shadow: var(--ring);
-            background: rgba(255, 255, 255, 0.08);
+
+          .input:hover,
+          select.input:hover,
+          textarea.input:hover {
+            border-color: rgba(163,230,53,0.25);
+            background: rgba(255,255,255,.06);
           }
+
+          .input:focus,
+          select.input:focus,
+          textarea.input:focus {
+            border-color: rgba(124,156,255,0.55);
+            box-shadow: var(--ring);
+            background: rgba(255,255,255,.08);
+          }
+
+          /* Dark dropdowns */
+          select.input {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            background-color: var(--card);
+            color: var(--text);
+            background-image: linear-gradient(135deg, var(--brand), var(--brand-2));
+            background-repeat: no-repeat;
+            background-size: 14px 14px;
+            background-position: right 12px center;
+          }
+          select.input option {
+            background-color: var(--card);
+            color: var(--text);
+          }
+
+          textarea.input {
+            resize: vertical;
+            min-height: 120px;
+          }
+
+          .card {
+            background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+          }
+
+          .card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(163,230,53,.25);
+            box-shadow: 0 12px 28px rgba(0,0,0,.45),
+                        0 0 0 1px rgba(34,197,94,.18) inset;
+          }
+
+          .muted { color: var(--muted); }
+
           @media (max-width: 640px) {
             .formGrid { grid-template-columns: 1fr; }
+          }
+
+          /* Global override for stubborn OS dropdowns */
+          select, option {
+            background-color: var(--card) !important;
+            color: var(--text) !important;
           }
         `}</style>
       </main>
