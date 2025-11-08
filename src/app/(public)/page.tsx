@@ -1,9 +1,9 @@
-// src/app/(public)/page.tsx
 import Image from "next/image";
 import { getDb } from "../lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../lib/auth";
 import ScheduleVisitButton from "../../components/ScheduleVisitButton";
+import DeletePetButton from "@/components/DeletePetButton"; // <-- NEW
 
 type Pet = {
   _id: string;
@@ -55,9 +55,23 @@ async function getRole(): Promise<Role | null> {
   return ((session?.user as any)?.role as Role) ?? null;
 }
 
-function PetCard({ pet, canSchedule }: { pet: Pet; canSchedule: boolean }) {
+function PetCard({
+  pet,
+  canSchedule,
+  canDelete, // <-- NEW
+}: {
+  pet: Pet;
+  canSchedule: boolean;
+  canDelete: boolean;
+}) {
   return (
-    <li className={`card ${pet.status === "RESERVED" ? "card--reserved" : ""}`}>
+    <li
+      className={`card ${pet.status === "RESERVED" ? "card--reserved" : ""}`}
+      style={{ position: "relative" }}
+    >
+      {/* ADMIN delete button in the card corner */}
+      {canDelete && <DeletePetButton petId={pet._id} petName={pet.name} />}
+
       <div className="thumb">
         {pet.photoUrl ? (
           <Image src={pet.photoUrl} alt={pet.name} fill style={{ objectFit: "cover" }} />
@@ -111,6 +125,7 @@ function PetCard({ pet, canSchedule }: { pet: Pet; canSchedule: boolean }) {
 export default async function Home() {
   const [pets, role] = await Promise.all([getPets(), getRole()]);
   const canSchedule = role === "EMPLOYEE" || role === "ADMIN";
+  const canDelete = role === "ADMIN"; // <-- NEW
 
   const available = pets.filter((p) => p.status === "AVAILABLE");
   const reserved = pets.filter((p) => p.status === "RESERVED");
@@ -120,7 +135,9 @@ export default async function Home() {
       <header>
         <h1 className="h1">Find your new best friend</h1>
         <p className="muted">
-          Browse pets currently available for adoption. Reservations are in progress and shown below.
+          Browse pets currently available for adoption. Holds are pets pending a home inspection and background check.<br />
+          <br />
+          <b>* Pets are not guaranteed to look anything as pictured but will probably at least maybe be the same breed.</b>
         </p>
       </header>
 
@@ -133,7 +150,7 @@ export default async function Home() {
         ) : (
           <ul className="grid">
             {available.map((p) => (
-              <PetCard key={p._id} pet={p} canSchedule={canSchedule} />
+              <PetCard key={p._id} pet={p} canSchedule={canSchedule} canDelete={canDelete} />
             ))}
           </ul>
         )}
@@ -148,7 +165,7 @@ export default async function Home() {
         ) : (
           <ul className="grid">
             {reserved.map((p) => (
-              <PetCard key={p._id} pet={p} canSchedule={canSchedule} />
+              <PetCard key={p._id} pet={p} canSchedule={canSchedule} canDelete={canDelete} />
             ))}
           </ul>
         )}
